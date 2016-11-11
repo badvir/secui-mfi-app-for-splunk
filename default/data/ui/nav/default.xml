@@ -1,0 +1,16 @@
+<nav color="#03052E">
+  
+  <view name="threat_dashboard" default='true' /> 
+  
+  <collection label="Threat Analytics">
+    <view name="attack_analytics" /> 
+    <view name="attacker_analytics" /> 
+    <view name="victim_analytics" /> 
+    <view name="detail_analytics" /> 
+  </collection>
+  
+  <view name="traffic_dashboard" /> 
+  
+  <view name="search"/>
+  
+</nav>

@@ -1,0 +1,140 @@
+<form>
+  <label>Attack Analytics</label>
+  <fieldset submitButton="true" autoRun="true">
+    <input type="time" token="analysis_rule_time_tn" searchWhenChanged="true">
+      <label></label>
+      <default>
+        <earliest>@d</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="dropdown" token="host_tn" searchWhenChanged="false">
+      <label>Host</label>
+      <choice value="*">Total</choice>
+      <search>
+        <query>eventtype=mfi_ipsddos | dedup host | table host</query>
+        <earliest>@w0</earliest>
+        <latest>now</latest>
+      </search>
+      <fieldForLabel>host</fieldForLabel>
+      <fieldForValue>host</fieldForValue>
+      <default>*</default>
+      <initialValue>*</initialValue>
+    </input>
+    <input type="dropdown" token="result_tn">
+      <label>Results</label>
+      <choice value="head 10">Top 10</choice>
+      <choice value="head 20">Top 20</choice>
+      <choice value="head 50">Top 50</choice>
+      <choice value="head 100">Top 100</choice>
+      <default>head 10</default>
+      <initialValue>head 10</initialValue>
+    </input>
+    <input type="dropdown" token="action_tn">
+      <label>Action</label>
+      <choice value="*">Total</choice>
+      <choice value="탐지 OR action=Detect">Detect</choice>
+      <choice value="차단 OR action=Block">Block</choice>
+      <default>*</default>
+      <initialValue>*</initialValue>
+    </input>
+    <input type="dropdown" token="severity_tn">
+      <label>Severity</label>
+      <choice value="*">Total</choice>
+      <choice value="1">Info</choice>
+      <choice value="2">Low</choice>
+      <choice value="3">Medium</choice>
+      <choice value="4">High</choice>
+      <choice value="5">Critical</choice>
+      <default>*</default>
+    </input>
+    <input type="text" token="src_ip_tn" searchWhenChanged="false">
+      <label>Attacker</label>
+      <default>*</default>
+    </input>
+    <input type="text" token="dst_ip_tn" searchWhenChanged="false">
+      <label>Victim</label>
+      <default>*</default>
+    </input>
+    <input type="text" token="rule_name_tn" searchWhenChanged="false">
+      <label>Attack Name</label>
+      <default>*</default>
+    </input>
+    <input type="text" token="app_tn" searchWhenChanged="false">
+      <label>Application</label>
+      <default>*</default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>Threat Trends</title>
+      <chart>
+        <search>
+          <query>host=$host_tn$ eventtype=mfi_ipsddos action=$action_tn$ priority="$severity_tn$" rule_name="$rule_name_tn$" src_ip="$src_ip_tn$" dst_ip="$dst_ip_tn$" app_scateid="$app_tn$" | fields rule_name, detects | timechart sum(detects) by rule_name | sort -sum(detects) | fillnull value="0"</query>
+          <earliest>$analysis_rule_time_tn.earliest$</earliest>
+          <latest>$analysis_rule_time_tn.latest$</latest>
+        </search>
+        <selection>
+          <set token="selection_earliest">$start$</set>
+          <set token="selection_latest">$end$</set>
+        </selection>
+        <drilldown target="_blank">
+          <link>
+            <![CDATA[
+            /app/secui_mfi/detail_analytics?form.host_tn=$host_tn$&form.action_tn=$action_tn$&form.severity_tn=$severity_tn$&form.rule_name_tn=$click.name2$&form.src_ip_tn=$src_ip_tn$&form.dst_ip_tn=$dst_ip_tn$&form.app_tn=$app_tn$&form.time_tn.earliest=$analysis_rule_time_tn.earliest$&form.time_tn.latest=$analysis_rule_time_tn.latest$
+          ]]>
+          </link>
+        </drilldown>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">area</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleY.text">Detections</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>Top Threats</title>
+        <search>
+          <query>index=* host=$host_tn$ eventtype=mfi_ipsddos action=$action_tn$ priority="$severity_tn$" rule_name="$rule_name_tn$" src_ip="$src_ip_tn$" dst_ip="$dst_ip_tn$" app_scateid="$app_tn$" |stats dc(app_scateid) as DC_APP, dc(src_ip) as DC_SRCIP, dc(dst_ip) as DC_DSTIP, sum(detects) as SUM_DETECTS, sum(bytes) as volume by rule_name, priority_name  | eval volume_converted=case( volume&gt;=(1024*1024*1024*1024),round(volume/(1024*1024*1024*1024),2)."TB", volume&gt;=(1024*1024*1024),round(volume/(1024*1024*1024),2)."GB", volume&gt;=(1024*1024),round(volume/(1024*1024),2)."MB",  volume&gt;=1024,round(volume/1024,2)."KB",  1=1,volume."B") | fields rule_name, priority_name, SUM_DETECTS, DC_SRCIP, DC_APP,  DC_DSTIP, volume_converted | sort -SUM_DETECTS | rename rule_name as "Threat Name", priority_name as "Severity", DC_APP as "Apps", DC_SRCIP as "Attackers", DC_DSTIP as "Victims", SUM_DETECTS AS "Detections", volume_converted as "Bytes" | $result_tn$</query>
+          <earliest>$selection_earliest$</earliest>
+          <latest>$selection_latest$</latest>
+        </search>
+        <drilldown target="_blank">
+          <link>
+            <![CDATA[
+            /app/secui_mfi/detail_analytics?form.host_tn=$host_tn$&form.action_tn=$action_tn$&form.severity_tn=$severity_tn$&form.rule_name_tn=$click.value$&form.src_ip_tn=$src_ip_tn$&form.dst_ip_tn=$dst_ip_tn$&form.app_tn=$app_tn$&form.time_tn.earliest=$selection_earliest$&form.time_tn.latest=$selection_latest$
+          ]]>
+          </link>
+        </drilldown>
+        <option name="wrap">true</option>
+        <option name="rowNumbers">false</option>
+        <option name="dataOverlayMode">heatmap</option>
+        <option name="count">10</option>
+        <option name="drilldown">row</option>
+      </table>
+    </panel>
+  </row>
+</form>

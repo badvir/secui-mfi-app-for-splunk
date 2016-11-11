@@ -1,0 +1,390 @@
+<form>
+  <label>Detail Analytics</label>
+  <fieldset submitButton="true">
+    <input type="time" token="time_tn" searchWhenChanged="true">
+      <label></label>
+      <default>
+        <earliest>@d</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="dropdown" token="host_tn">
+      <label>Host</label>
+      <choice value="*">Total</choice>
+      <search>
+        <query>eventtype=mfi_ipsddos | dedup host | table host</query>
+        <earliest>@w0</earliest>
+        <latest>now</latest>
+      </search>
+      <fieldForLabel>host</fieldForLabel>
+      <fieldForValue>host</fieldForValue>
+      <default>*</default>
+      <initialValue>*</initialValue>
+    </input>
+    <input type="dropdown" token="action_tn">
+      <label>Action</label>
+      <choice value="*">Total</choice>
+      <choice value="탐지 OR action=Detect">Detect</choice>
+      <choice value="차단 OR action=Block">Block</choice>
+      <default>*</default>
+      <initialValue>*</initialValue>
+    </input>
+    <input type="dropdown" token="severity_tn">
+      <label>Severity</label>
+      <choice value="*">Total</choice>
+      <choice value="1">Info</choice>
+      <choice value="2">Low</choice>
+      <choice value="3">Medium</choice>
+      <choice value="4">High</choice>
+      <choice value="5">Critical</choice>
+      <default>*</default>
+    </input>
+    <input type="text" token="src_ip_tn" searchWhenChanged="false">
+      <label>Attacker</label>
+      <default>*</default>
+    </input>
+    <input type="text" token="dst_ip_tn" searchWhenChanged="false">
+      <label>Victim</label>
+      <default>*</default>
+    </input>
+    <input type="text" token="rule_name_tn" searchWhenChanged="false">
+      <label>Attack Name</label>
+      <default>*</default>
+    </input>
+    <input type="text" token="app_tn" searchWhenChanged="false">
+      <label>Application</label>
+      <default>*</default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>Threat Trends</title>
+      <chart>
+        <search>
+          <query>host="$host_tn$" eventtype=mfi_ipsddos action=$action_tn$ priority="$severity_tn$" rule_name="$rule_name_tn$" src_ip="$src_ip_tn$" dst_ip="$dst_ip_tn$" app_scateid="$app_tn$" | fields rule_name, detects | sort -detects | timechart sum(detects) by rule_name | sort -sum(detects) | fillnull value="0"</query>
+          <earliest>$time_tn.earliest$</earliest>
+          <latest>$time_tn.latest$</latest>
+        </search>
+        <selection>
+          <set token="selection_earliest">$start$</set>
+          <set token="selection_latest">$end$</set>
+        </selection>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">area</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleY.text">Detections</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <viz type="sankey_diagram_app.sankey_diagram">
+        <title>Attack Flows (Attacker - Attack Name - Victim)</title>
+        <search>
+          <query>host="$host_tn$" eventtype=mfi_ipsddos action=$action_tn$ priority="$severity_tn$" rule_name="$rule_name_tn$" src_ip="$src_ip_tn$" dst_ip="$dst_ip_tn$" app_scateid="$app_tn$" | stats sum(detects) by src_ip, rule_name | fields src_ip, rule_name, sum(detects) | sort -sum(detects) | rename src_ip as first, rule_name as second | head 100 | append [search module_type=IPS/DDoS action=$action_tn$ priority="$severity_tn$" rule_name="$rule_name_tn$" src_ip="$src_ip_tn$" dst_ip="$dst_ip_tn$" app_scateid="$app_tn$" | stats sum(detects) by rule_name, dst_ip | fields rule_name, dst_ip, sum(detects) | sort -sum(detects) | rename rule_name as first, dst_ip as second | head 100]</query>
+          <earliest>$selection_earliest$</earliest>
+          <latest>$selection_latest$</latest>
+        </search>
+      </viz>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Top 10 Attackers</title>
+        <search>
+          <query>host="$host_tn$" eventtype=mfi_ipsddos action=$action_tn$ priority="$severity_tn$" rule_name="$rule_name_tn$" src_ip="$src_ip_tn$" dst_ip="$dst_ip_tn$" app_scateid="$app_tn$" | fields rule_name, src_ip, detects | stats sum(detects) as Detections by src_ip | sort -Detections | head 10</query>
+          <earliest>$selection_earliest$</earliest>
+          <latest>$selection_latest$</latest>
+        </search>
+        <drilldown>
+          <link>
+            <![CDATA[
+            /app/secui_mfi/detail_analytics?form.host_tn=$host_tn$&form.action_tn=$action_tn$&form.severity_tn=$severity_tn$&form.rule_name_tn=$rule_name_tn$&form.src_ip_tn=$click.value$&form.dst_ip_tn=$dst_ip_tn$&form.app_tn=$app_tn$&form.time_tn.earliest=$time_tn.earliest$&form.time_tn.latest=$time_tn.latest$
+          ]]>
+          </link>
+        </drilldown>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">bar</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisEnd</option>
+        <option name="charting.legend.placement">none</option>
+      </chart>
+    </panel>
+    <panel>
+      <table>
+        <title>Top 10 Attacks</title>
+        <search>
+          <query>host="$host_tn$" eventtype=mfi_ipsddos action=$action_tn$ priority="$severity_tn$" rule_name="$rule_name_tn$" src_ip="$src_ip_tn$" dst_ip="$dst_ip_tn$" app_scateid="$app_tn$" | fields rule_name, detects | sort -detects | stats sum(detects) as Detections by rule_name | sort -Detections | head 10</query>
+          <earliest>$selection_earliest$</earliest>
+          <latest>$selection_latest$</latest>
+        </search>
+        <drilldown>
+          <link>
+            <![CDATA[
+            /app/secui_mfi/detail_analytics?form.host_tn=$host_tn$&form.action_tn=$action_tn$&form.severity_tn=$severity_tn$&form.rule_name_tn=$click.value$&form.src_ip_tn=$src_ip_tn$&form.dst_ip_tn=$dst_ip_tn$&form.app_tn=$app_tn$&form.time_tn.earliest=$time_tn.earliest$&form.time_tn.latest=$time_tn.latest$
+          ]]>
+          </link>
+        </drilldown>
+        <option name="drilldown">cell</option>
+        <option name="wrap">true</option>
+        <option name="rowNumbers">false</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="count">10</option>
+      </table>
+    </panel>
+    <panel>
+      <chart>
+        <title>Top Applications</title>
+        <search>
+          <query>host="$host_tn$" eventtype=mfi_ipsddos action=$action_tn$ priority="$severity_tn$" rule_name="$rule_name_tn$" src_ip="$src_ip_tn$" dst_ip="$dst_ip_tn$" app_scateid="$app_tn$" | fields app_scateid, detects | stats sum(detects) as Detections by app_scateid | sort -Detections</query>
+          <earliest>$selection_earliest$</earliest>
+          <latest>$selection_latest$</latest>
+        </search>
+        <drilldown>
+          <link>
+            <![CDATA[
+            /app/secui_mfi/detail_analytics?form.host_tn=$host_tn$&form.action_tn=$action_tn$&form.severity_tn=$severity_tn$&form.rule_name_tn=$rule_name_tn$&form.src_ip_tn=$src_ip_tn$&form.dst_ip_tn=$dst_ip_tn$&form.app_tn=$click.value$&form.time_tn.earliest=$time_tn.earliest$&form.time_tn.latest=$time_tn.latest$
+          ]]>
+          </link>
+        </drilldown>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">pie</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>Top 10 Victims</title>
+        <search>
+          <query>host="$host_tn$" eventtype=mfi_ipsddos action=$action_tn$ priority="$severity_tn$" rule_name="$rule_name_tn$" src_ip="$src_ip_tn$" dst_ip="$dst_ip_tn$" app_scateid="$app_tn$" | fields rule_name, dst_ip, detects | stats sum(detects) as Detections by dst_ip | sort -Detections | head 10</query>
+          <earliest>$selection_earliest$</earliest>
+          <latest>$selection_latest$</latest>
+        </search>
+        <drilldown>
+          <link>
+            <![CDATA[
+            /app/secui_mfi/detail_analytics?form.host_tn=$host_tn$&form.action_tn=$action_tn$&form.severity_tn=$severity_tn$&form.rule_name_tn=$rule_name_tn$&form.src_ip_tn=$src_ip_tn$&form.dst_ip_tn=$click.value$&form.app_tn=$app_tn$&form.time_tn.earliest=$time_tn.earliest$&form.time_tn.latest=$time_tn.latest$
+          ]]>
+          </link>
+        </drilldown>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">bar</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisEnd</option>
+        <option name="charting.legend.placement">none</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Top Attacker Country</title>
+        <search>
+          <query>host="$host_tn$" eventtype=mfi_ipsddos action=$action_tn$ priority="$severity_tn$" rule_name="$rule_name_tn$" src_ip="$src_ip_tn$" dst_ip="$dst_ip_tn$" app_scateid="$app_tn$" | iplocation src_ip | stats sum(detects) as Detections by Country | sort -Detections</query>
+          <earliest>$selection_earliest$</earliest>
+          <latest>$selection_latest$</latest>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">pie</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>Top Victim OS</title>
+        <search>
+          <query>host="$host_tn$" eventtype=mfi_ipsddos action=$action_tn$ priority="$severity_tn$" rule_name="$rule_name_tn$" src_ip="$src_ip_tn$" dst_ip="$dst_ip_tn$" app_scateid="$app_tn$" | fields dst_ca_os_id, detects | stats sum(detects) as Detections by dst_ca_os_id | sort -Detections</query>
+          <earliest>$selection_earliest$</earliest>
+          <latest>$selection_latest$</latest>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">pie</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>Top Victim Ports</title>
+        <search>
+          <query>host="$host_tn$" eventtype=mfi_ipsddos action=$action_tn$ priority="$severity_tn$" rule_name="$rule_name_tn$" src_ip="$src_ip_tn$" dst_ip="$dst_ip_tn$" app_scateid="$app_tn$" | fields dst_port, detects | stats sum(detects) as Detections by dst_port | sort -Detections</query>
+          <earliest>$selection_earliest$</earliest>
+          <latest>$selection_latest$</latest>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">pie</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>Top Victim Programs</title>
+        <search>
+          <query>host="$host_tn$" eventtype=mfi_ipsddos action=$action_tn$ priority="$severity_tn$" rule_name="$rule_name_tn$" src_ip="$src_ip_tn$" dst_ip="$dst_ip_tn$" app_scateid="$app_tn$" | fields dst_ca_prog_id, detects | stats sum(detects) as Detections by dst_ca_prog_id | sort -Detections</query>
+          <earliest>$selection_earliest$</earliest>
+          <latest>$selection_latest$</latest>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">pie</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+      </chart>
+    </panel>
+  </row>
+</form>
